@@ -1,0 +1,27 @@
+# --- 1. MODEL AI (WAJIB) ---
+# Abaikan semua file model .gguf dimanapun berada
+*.gguf
+*.bin
+*.pt
+
+# Abaikan seluruh isi folder models
+models/
+
+# --- 2. PYTHON CACHE (WAJIB) ---
+# File sampah hasil kompilasi python
+__pycache__/
+*.pyc
+
+# --- 3. VIRTUAL ENVIRONMENT ---
+# Abaikan folder env jika ada
+venv/
+.venv/
+env/
+
+# --- 4. CONFIG & SECRETS ---
+# Jangan upload file .env jika nanti pakai key API rahasia
+.env
+
+# --- 5. IDE SETTINGS ---
+.vscode/
+.idea/
