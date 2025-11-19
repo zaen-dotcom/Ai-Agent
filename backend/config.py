@@ -44,7 +44,7 @@ MODEL_INIT_PARAMS = {
 # ==================================================
 GENERATION_PARAMS = {
     "max_tokens": 4096,      
-    "temperature": 0.6,       
+    "temperature": 0.2,       
     "top_p": 0.9,             
     "repeat_penalty": 1.1,    
     "echo": False,            
@@ -57,7 +57,7 @@ GENERATION_PARAMS = {
 # Update: Menambahkan aturan "CLI Math Formatting"
 
 SYSTEM_PROMPT = """
-Kamu adalah Lumino, Local Intelligence Unit spesialis coding dan arsitektur software.
+Kamu adalah Lumino, Assistant Local Intelligence Unit spesialis coding dan arsitektur software yang di kembangkan oleh Fadil Z.
 
 ATURAN FORMATTING TAMPILAN (PENTING UNTUK CLI):
 1. MATEMATIKA & LOGIKA (WAJIB UNICODE):

@@ -7,127 +7,150 @@ from rich.panel import Panel
 from rich.text import Text
 from rich.align import Align
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
-from rich.markdown import Markdown
-from rich.rule import Rule  # <-- Ini yang tadi kurang
+from rich.rule import Rule
 from rich import box
+import colorsys # Untuk membuat gradasi warna
 
-# --- KONFIGURASI UI ---
-# API URL harus sama dengan port di main.py
+# --- IMPORT FORMATTER CANGGIH (Yang sudah kita buat) ---
+# Ini menjamin Tabel & Matematika tampil sempurna
+try:
+    from formatter import create_styled_panel
+except ImportError:
+    # Fallback jika file formatter.py belum ada/salah nama
+    def create_styled_panel(text, title):
+        from rich.markdown import Markdown
+        return Panel(Markdown(text), title=title)
+
+# --- KONFIGURASI ---
 API_URL = "http://127.0.0.1:5000/chat"
-
 console = Console()
 
-# Palet Warna Cyberpunk/Modern
-C_USER = "green"
-C_AI = "cyan"
-C_ACCENT = "bright_cyan"
-C_DIM = "grey50"
-C_ERROR = "red"
+# Palet Warna (Professional Tech Theme)
+C_PRIMARY = "dodger_blue1"   # Biru Profesional
+C_ACCENT  = "cyan"           # Aksen Tech
+C_TEXT    = "white"          # Teks Utama
+C_DIM     = "grey58"         # Teks Info
+C_SUCCESS = "green"
+
+# --- FUNGSI UNTUK GENERATE GRADASI WARNA ---
+def get_gradient_color(start_rgb, end_rgb, fraction):
+    """Menghasilkan warna RGB di antara dua warna berdasarkan fraksi (0.0-1.0)"""
+    r = int(start_rgb[0] + (end_rgb[0] - start_rgb[0]) * fraction)
+    g = int(start_rgb[1] + (end_rgb[1] - start_rgb[1]) * fraction)
+    b = int(start_rgb[2] + (end_rgb[2] - start_rgb[2]) * fraction)
+    return f"#{r:02x}{g:02x}{b:02x}"
 
 def show_intro():
-    """Menampilkan Intro Loading saat client pertama kali dipanggil oleh main.py"""
+    """Menampilkan Intro Loading dengan Logo Gradasi"""
     console.clear()
     
     # Logo ASCII
     logo = """
-    ██╗     ██╗   ██╗███╗   ███╗██╗███╗   ██╗ ██████╗ 
-    ██║     ██║   ██║████╗ ████║██║████╗  ██║██╔═══██╗
-    ██║     ██║   ██║██╔████╔██║██║██╔██╗ ██║██║   ██║
-    ██║     ██║   ██║██║╚██╔╝██║██║██║╚██╗██║██║   ██║
-    ███████╗╚██████╔╝██║ ╚═╝ ██║██║██║ ╚████║╚██████╔╝
-    ╚══════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝╚═╝  ╚═══╝ ╚═════╝ 
+ ██╗     ██╗   ██╗███╗    ███╗██╗███╗    ██╗ ██████╗ 
+ ██║     ██║   ██║████╗  ████║██║████╗   ██║██╔═══██╗
+ ██║     ██║   ██║██╔████╔██║██║██╔██╗  ██║██║   ██║
+ ██║     ██║   ██║██║╚██╔╝██║██║██║╚██╗██║██║   ██║
+ ███████╗╚██████╔╝██║ ╚═╝ ██║██║██║ ╚████║╚██████╔╝
+ ╚══════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝╚═╝  ╚═══╝ ╚═════╝ 
     """
     
-    console.print(Align.center(Text(logo, style=f"bold {C_AI}")))
-    console.print(Align.center(Text("SYSTEM INITIALIZED via MAIN CORE", style=f"bold {C_DIM} tracking=3")))
+    # Warna awal dan akhir untuk gradasi (RGB tuples)
+    # rich.color.Color bisa membantu di sini, tapi kita pakai manual dulu
+    start_rgb = (0, 70, 150)  # Dark Blue
+    end_rgb = (0, 200, 255)  # Bright Cyan
+
+    logo_lines = logo.strip().split('\n')
+    num_lines = len(logo_lines)
+
+    console.print() # Spasi atas
+    for i, line in enumerate(logo_lines):
+        # Hitung fraksi untuk setiap baris
+        fraction = i / (num_lines - 1) if num_lines > 1 else 0
+        gradient_color = get_gradient_color(start_rgb, end_rgb, fraction)
+        console.print(Align.center(Text(line, style=f"bold {gradient_color}")))
+    
+    console.print(Align.center(Text("AI INTELLIGENCE CORE", style=f"bold {C_DIM} tracking=1")))
+    console.print(Align.center(Text("v1.0.4-stable", style=f"{C_DIM}"))) # Versi di bawah logo
     console.print("\n")
 
-    # Animasi Loading (Hiasan visual)
+    # System Check Animation (Cepat & Informatif)
+    steps = [
+        "Resolving local endpoints...",
+        "Verifying security handshake...",
+        "Syncing context buffer...",
+        "Connection established."
+    ]
+
     with Progress(
-        SpinnerColumn(style=C_ACCENT),
-        TextColumn("[bold cyan]{task.description}"),
-        BarColumn(bar_width=30, style=C_AI, complete_style=C_ACCENT),
+        SpinnerColumn("dots", style=C_ACCENT),
+        TextColumn("[white]{task.description}"),
+        BarColumn(bar_width=20, style="grey15", complete_style=C_PRIMARY),
         console=console,
         transient=True
     ) as progress:
-        task = progress.add_task("Establishing Uplink...", total=100)
-        for _ in range(25):
-            time.sleep(0.02)
-            progress.advance(task, 4)
+        
+        task = progress.add_task("Init...", total=100)
+        
+        chunk = 100 / len(steps)
+        for step in steps:
+            progress.update(task, description=step)
+            time.sleep(0.15)
+            progress.advance(task, chunk)
 
-    console.print(Align.center(Text("● CONNECTED TO MY BRAIN", style="bold green")))
+    # Status Akhir
+    console.print(Align.center(f"[{C_SUCCESS}]●[/] [{C_DIM}]CONNECTED TO MY BRAIN[/]"))
     console.print(Rule(style=C_DIM))
-    console.print("\n")
-
-def print_ai_message(markdown_text, context_files=None):
-    """Render pesan AI dengan panel modern"""
-    md_content = Markdown(markdown_text)
-    
-    subtitle = None
-    if context_files:
-        files_str = ", ".join(context_files)
-        subtitle = f"[dim]Context: {files_str}[/]"
-
-    ai_panel = Panel(
-        md_content,
-        box=box.ROUNDED,
-        border_style=C_AI,
-        title=f"[bold {C_ACCENT}]⚡ Lumino[/]",
-        subtitle=subtitle,
-        subtitle_align="right",
-        title_align="left",
-        padding=(1, 2),
-        expand=True
-    )
-    console.print(ai_panel)
-    console.print() # Spasi bawah
+    console.print()
 
 def run():
-    """Fungsi utama yang dipanggil oleh main.py"""
-    # Tampilkan intro
+    """Main Loop"""
     show_intro()
 
     while True:
         try:
-            # 1. Input User Modern
-            user_input = Prompt.ask(f"[bold {C_ACCENT}]❯[/] Input")
-            
-            # Cek command exit
-            if user_input.lower() in ['exit', 'quit']:
-                console.print(f"\n[bold {C_DIM}]Terminating Session...[/]")
-                break
+            console.print()
+            user_input = Prompt.ask(f"[bold {C_PRIMARY}]❯[/]")
             
             if not user_input.strip():
                 continue
+                
+            if user_input.lower() in ['exit', 'quit']:
+                console.print(f"\n[bold {C_DIM}]Closing connection...[/]")
+                break
 
-            # 2. Loading State & Request ke Server
-            # Menggunakan spinner aesthetic kotak-kotak
-            with console.status(f"[bold {C_DIM}]Processing...[/]", spinner="aesthetic"):
+            with console.status(f"[bold {C_DIM}]Thinking...[/]", spinner="dots", spinner_style=C_PRIMARY):
                 try:
                     payload = {"message": user_input}
-                    # Request ke server Flask yang dijalankan main.py
+                    
+                    start_time = time.time()
                     response = requests.post(API_URL, json=payload)
+                    end_time = time.time()
+                    
                     response.raise_for_status()
                     
                     data = response.json()
                     bot_reply = data.get("response", "")
                     files_read = data.get("files_read", [])
+                    
+                    latency = (end_time - start_time) * 1000
 
-                    # 3. Tampilkan Balasan
-                    print_ai_message(bot_reply, files_read)
+                    panel_title = f"Lumino [dim]({latency:.0f}ms)[/]"
+                    
+                    final_panel = create_styled_panel(bot_reply, title=panel_title)
+                    console.print(final_panel)
+
+                    if files_read:
+                        file_list = ", ".join([f"'{f}'" for f in files_read])
+                        console.print(f"   [{C_ACCENT}]└─ 📎 References:[/][dim] {file_list}[/]")
 
                 except requests.exceptions.ConnectionError:
-                    # Error khusus jika server Flask di main.py belum siap/mati
-                    console.print(f"[bold red]Error:[/][dim] Cannot connect to server at {API_URL}.[/]")
-                    console.print("[dim]Ensure Flask server in main.py is running.[/]")
-                
+                    console.print(Panel(f"[bold red]Connection Lost[/]\nCannot reach {API_URL}", style="red"))
                 except Exception as e:
-                    console.print(f"[bold red]Error:[/][dim] {e}[/]")
+                    console.print(Panel(f"[bold red]System Error[/]\n{str(e)}", style="red"))
 
         except KeyboardInterrupt:
-            console.print(f"\n[{C_DIM}]Interrupted by User.[/]")
+            console.print(f"\n[{C_DIM}]Session terminated by user.[/]")
             break
 
-# Blok ini hanya jalan jika client.py dijalankan sendiri (testing)
 if __name__ == "__main__":
     run()
