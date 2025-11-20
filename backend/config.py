@@ -45,8 +45,9 @@ MODEL_INIT_PARAMS = {
 GENERATION_PARAMS = {
     "max_tokens": 4096,      
     "temperature": 0.2,       
-    "top_p": 0.9,             
-    "repeat_penalty": 1.1,    
+    "top_p": 0.9, 
+    "top_k": 40,            
+    "repeat_penalty": 1.05,    
     "echo": False,            
     "stop": ["<|im_end|>", "<|endoftext|>", "\n\n\n"]
 }

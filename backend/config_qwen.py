@@ -35,12 +35,13 @@ MODEL_INIT_PARAMS = {
 # 3. GENERATION PARAMS
 # ==================================================
 GENERATION_PARAMS = {
-    "max_tokens": 2048,       
-    "temperature": 0.5,       
-    "top_p": 0.9,            
-    "repeat_penalty": 1.15,    
-    "echo": False,            
-    "stop": ["<|im_end|>", "<|endoftext|>"] 
+    "max_tokens": 4096,           # Naikkan untuk penjelasan kompleks
+    "temperature": 0.1,           # TURUNKAN drastis (0.1-0.3)
+    "top_p": 0.85,                # Sedikit turunkan
+    "repeat_penalty": 1.05,       # TURUNKAN (1.05-1.1)
+    "top_k": 40,                  # Tambahkan ini
+    "echo": False,
+    "stop": ["<|im_end|>", "<|endoftext|>", "\n\n\n"]
 }
 
 # ==================================================
@@ -53,11 +54,14 @@ ATURAN FORMATTING (KRUSIAL UNTUK CLI):
 1. DILARANG KERAS menggunakan format LaTeX Block seperti:
    - \\begin{pmatrix}, \\begin{bmatrix}, \\frac{}{}
    - Terminal TIDAK BISA membaca kode tersebut!
+   - \\begin{cases}, \\begin{equation}, \\begin{align}
+   - \\text{...}
 
-2. GUNAKAN FORMAT LINEAR / PYTHON STYLE:
-   - Matriks: Gunakan representasi array [[a, b], [c, d]]
-   - Pecahan: Gunakan garis miring (1/2, a/b)
-   - Akar: Gunakan simbol √ atau pangkat (1/2)
+2. Gunakan format LINEAR untuk Matematika:
+   - Pecahan: gunakan garis miring (a/b).
+   - Akar: gunakan simbol √.
+   - Integral: gunakan simbol ∫.
+   - Tak Hingga: gunakan simbol ∞.
 
 3. FISIKA KUANTUM:
    - Gunakan Notasi Dirac dengan representasi vektor baris:

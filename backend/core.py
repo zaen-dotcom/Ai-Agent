@@ -28,7 +28,7 @@ except ImportError:
 
 # Config Reasoning (DeepSeek) - [BARU]
 try:
-    from backend import config_deepseek as config_reasoning
+    from backend import config_qwen as config_reasoning
     has_reasoning = True
 except ImportError:
     config_reasoning = None
@@ -89,76 +89,95 @@ class AIEngine:
         self.load_model()
 
     def _select_module_interactive(self):
-        """Menu Interaktif 3 Pilihan (General, Coding, Reasoning)"""
+        """Menu Interaktif 3 Pilihan (Modern Card Style)"""
         
         # 0=General, 1=Coding, 2=Reasoning
         selected_index = 1 
         
-        # Hitung jumlah opsi (2 atau 3 tergantung ketersediaan DeepSeek)
+        # Hitung jumlah opsi
         total_options = 3 if has_reasoning else 2
 
         while True:
             force_clear()
             console.print()
             
+            # Header dengan Spacer
             console.print(Align.center("[bold white]LUMINO[/][dim] INTELLIGENCE SYSTEM[/]"))
-            console.print(Rule(style="dim grey23"))
+            console.print(Rule(style="dim grey15"))
             console.print()
+            console.print() # Tambah spasi biar lega
 
-            # --- RENDER PILIHAN ---
-            # Grid menyesuaikan jumlah kolom
-            grid = Table.grid(expand=True, padding=(0, 1))
+            # --- RENDER PILIHAN (GRID) ---
+            grid = Table.grid(expand=True, padding=(0, 2)) # Tambah padding antar kotak
             for _ in range(total_options):
                 grid.add_column(justify="center", ratio=1)
 
             # --- HELPER STYLE ---
-            def get_style(idx, current_sel, color_name, icon_char):
+            def get_card_content(idx, current_sel, title, subtitle, color, icon):
                 if idx == current_sel:
-                    return f"bold white on {color_name}", f"bold {color_name}", "●", color_name
-                return "dim white", "dim white", "○", "grey23"
+                    # STATE AKTIF: Border Terang, Teks Tebal, Background Header
+                    border_col = color
+                    title_style = f"bold black on {color}"
+                    sub_style = f"bold {color}"
+                    box_type = box.ROUNDED
+                else:
+                    # STATE PASIF: Redup, Border Abu
+                    border_col = "grey23"
+                    title_style = "dim white on grey15"
+                    sub_style = "dim white"
+                    box_type = box.ROUNDED
+                
+                # Isi Kartu
+                content = Text.assemble(
+                    (f"\n {icon} {title} \n", title_style),
+                    (f"\n{subtitle}", sub_style)
+                )
+                return Panel(content, border_style=border_col, box=box_type, width=30, padding=(0,0))
 
             # 1. KOTAK GENERAL (Index 0)
-            bg_gen, txt_gen, ico_gen, bor_gen = get_style(0, selected_index, "cyan", "●")
-            panel_gen = Panel(
-                Text.assemble((f"\n{ico_gen} GENERAL KNOWLEDGE\n", bg_gen), ("\nnXXXXXXX", txt_gen)),
-                border_style=bor_gen, box=box.ROUNDED
+            card_gen = get_card_content(
+                0, selected_index, 
+                "GENERAL", 
+                "Standard Chat", 
+                "cyan", "●"
             )
 
             # 2. KOTAK CODING (Index 1)
-            bg_cod, txt_cod, ico_cod, bor_cod = get_style(1, selected_index, "green", "●")
-            panel_cod = Panel(
-                Text.assemble((f"\n{ico_cod} CODING, ALGORITHM\n", bg_cod), ("\nXXXXXXX", txt_cod)),
-                border_style=bor_cod, box=box.ROUNDED
+            card_cod = get_card_content(
+                1, selected_index, 
+                "CODING", 
+                "Dev Expert", 
+                "spring_green1", "●" # Hijau Neon lebih segar
             )
 
-            # Masukkan ke list baris
-            row_panels = [panel_gen, panel_cod]
+            row_panels = [card_gen, card_cod]
 
-            # 3. KOTAK REASONING (Index 2) - Jika Ada
+            # 3. KOTAK REASONING (Index 2)
             if has_reasoning:
-                bg_rea, txt_rea, ico_rea, bor_rea = get_style(2, selected_index, "magenta", "●")
-                panel_rea = Panel(
-                    Text.assemble((f"\n{ico_rea} REASONING, QUANTUM\n", bg_rea), ("\nXXXXXXX", txt_rea)),
-                    border_style=bor_rea, box=box.ROUNDED
+                card_rea = get_card_content(
+                    2, selected_index, 
+                    "LOGIC", 
+                    "Deep Reasoning, Math", 
+                    "magenta", "●"
                 )
-                row_panels.append(panel_rea)
+                row_panels.append(card_rea)
 
             # Tambahkan ke grid
             grid.add_row(*row_panels)
 
-            # Panel Utama Pembungkus
+            # Panel Utama Pembungkus (Invisible Border agar bersih)
             main_panel = Panel(
                 grid,
                 title="[bold white]SELECT NEURAL MODULE[/]",
-                subtitle="[dim]Use ← Left / Right → to Switch, ENTER to Confirm[/]",
-                border_style="white",
-                box=box.ROUNDED,
-                padding=(1, 2),
-                width=90 if has_reasoning else 70 # Lebarkan jika ada 3 opsi
+                subtitle="[dim]← Switch →   |   ENTER Confirm[/]",
+                border_style="grey11", # Border sangat tipis/gelap
+                box=box.HORIZONTALS,   # Cuma garis atas bawah biar minimalis
+                padding=(2, 2),
+                width=100 if has_reasoning else 70
             )
             console.print(Align.center(main_panel))
 
-            # --- INPUT HANDLING (Cyclic Navigation) ---
+            # --- INPUT HANDLING ---
             key = msvcrt.getch()
             
             if key == b'\xe0': 
@@ -170,7 +189,7 @@ class AIEngine:
             elif key == b'\r': # Enter
                 break 
         
-        # SET CONFIG BERDASARKAN PILIHAN
+        # SET CONFIG
         if selected_index == 0:
             self.active_config = config_general
             self.mode_name = "GENERAL KNOWLEDGE"
@@ -184,7 +203,8 @@ class AIEngine:
             self.mode_name = "DEEP LOGIC & REASONING"
             self.model_label = "DeepSeek R1 Distill"
             
-        console.print(f"\n[dim]Module selected:[/][bold cyan] {self.mode_name}[/]")
+        # Feedback visual
+        console.print(f"\n[dim]Booting module:[/][bold cyan] {self.mode_name}[/]")
         time.sleep(0.4)
         force_clear()
 

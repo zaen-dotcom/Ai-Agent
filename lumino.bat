@@ -1,13 +1,18 @@
 @echo off
-:: ==========================================
-:: LAUNCHER LUMINO ASSISTANT
-:: ==========================================
+title LUMINO SYSTEM
+color 0B
+cls
 
-:: Perintah ini akan membuka Windows Terminal (wt)
-:: -p "Lumino"                     : Menggunakan profile khusus yang tadi dibuat
-:: -d "D:\_PROJEK_PRIBADI\AIAgent" : Memaksa terminal start di folder project (PENTING)
-:: cmd /k "python main.py"         : Menjalankan script python dan menjaga jendela tetap terbuka
+echo.
+echo  LUMINO INTELLIGENCE SYSTEM
+echo  Initializing...
+echo.
 
-start "D:\_PROJEK_PRIBADI\AIAgent" cmd /k "python main.py"
+:: Pindah ke folder script
+cd /d "%~dp0"
 
-exit
+:: Jalankan main.py langsung
+python main.py
+
+:: Jika error, jangan langsung tutup layar
+pause

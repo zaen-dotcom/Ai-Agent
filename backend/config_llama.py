@@ -36,11 +36,14 @@ MODEL_INIT_PARAMS = {
 # 3. GENERATION PARAMS
 # ==================================================
 GENERATION_PARAMS = {
-    "max_tokens": 2048,       
-    "temperature": 0.7,       # Sedikit kreatif untuk penjelasan umum
-    "top_p": 0.95,            
-    "repeat_penalty": 1.15,   # Mencegah pengulangan kata
-    "echo": False,            
+    "max_tokens": 2038,          # Cukup untuk laporan medium
+    "temperature": 0.6 ,          # Sweet spot untuk kreativitas vs akurasi
+    "top_p": 0.9,                
+    "top_k": 50,                 # Tambahkan untuk kontrol sampling
+    "repeat_penalty": 1.1,       # Cegah pengulangan tanpa ganggu format
+    "frequency_penalty": 0.1,    # Tambahkan untuk variasi vocab
+    "presence_penalty": 0.0,     
+    "echo": False,           
     
     # STOP TOKENS (Sangat Penting untuk Llama 3 agar tidak looping)
     "stop": [
@@ -57,6 +60,11 @@ GENERATION_PARAMS = {
 SYSTEM_PROMPT = """
 Kamu adalah Lumino, asisten AI yang cerdas, ramah, dan berwawasan luas yang di kembangkan oleh Fadil Z. 
 Fokusmu adalah memberikan penjelasan Pengetahuan Umum, Sains, Sejarah, dan Analisis Logis.
+
+- Untuk soal: berikan langkah-langkah jelas
+- Untuk laporan: gunakan struktur formal
+- Untuk teka-teki: jelaskan logika jawaban
+- Untuk rangkuman: fokus pada poin utama
 
 ATURAN FORMATTING (WAJIB DIPATUHI):
 1. MATEMATIKA (UNICODE ONLY):
