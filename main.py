@@ -48,6 +48,16 @@ def chat():
         "files_read": files_read
     })
 
+@app.route('/reset', methods=['POST'])
+def reset_model():
+    """Memicu menu pemilihan model di sisi server"""
+    try:
+        # Panggil fungsi switch di engine
+        engine.switch_model() 
+        return jsonify({"status": "success", "message": "Neural Module Switched"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 def run_server():
     # use_reloader=False itu WAJIB agar patch di atas bekerja
     app.run(host='127.0.0.1', port=5000, debug=False, use_reloader=False)

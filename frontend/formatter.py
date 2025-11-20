@@ -15,7 +15,6 @@ custom_styles = {
     "markdown.strong": "bold yellow",
     "markdown.italic": "italic cyan",
     "markdown.block_quote": "dim white",
-    # Styling Tabel (Rich handle ini otomatis, tapi kita bisa atur warnanya lewat tema dasar)
 }
 
 console = Console(theme=Theme(custom_styles), force_terminal=True, color_system="truecolor")
@@ -57,6 +56,15 @@ def clean_markdown_text(text):
     """
     Membersihkan format teks AI dengan logika PINTAR.
     """
+
+    # --- [FITUR BARU] HAPUS THINKING PROCESS DEEPSEEK ---
+    # Menghapus apapun yang ada di dalam <think>...</think>
+    # flags=re.DOTALL penting agar titik (.) bisa memakan baris baru (enter)
+    text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
+    
+    # Hapus sisa tag jika ada yang bocor (misal closing tag doang)
+    text = text.replace('<think>', '').replace('</think>', '')
+    # ----------------------------------------------------
     
     # 0. Konversi LaTeX ke Unicode
     text = replace_latex_with_unicode(text)
@@ -77,11 +85,11 @@ def clean_markdown_text(text):
     text = re.sub(r'(\n)([*-] )', r'\1\n\2', text)
     text = re.sub(r'(\n)(\d+\. )', r'\1\n\2', text)
     
-    # 6. RAPIKAN TABEL (FITUR BARU)
-    # Masalah: AI sering nulis "Berikut tabelnya:| Header |" tanpa spasi enter.
-    # Solusi: Cari baris yang dimulai '|' tapi baris sebelumnya BUKAN '|' (bukan bagian tabel), lalu kasih jarak.
-    # Regex: Cari newline, diikuti pipa, di mana sebelumnya TIDAK ada pipa.
+    # 6. RAPIKAN TABEL
     text = re.sub(r'(?<!\|)\n(\|.*\|)', r'\n\n\1', text)
+    
+    # 7. TRIM WHITESPACE AWAL (Biar gak ada spasi kosong di atas panel)
+    text = text.strip()
 
     return text
 

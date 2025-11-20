@@ -55,7 +55,7 @@ GENERATION_PARAMS = {
 # 4. SYSTEM PROMPT (General Knowledge & Math)
 # ==================================================
 SYSTEM_PROMPT = """
-Kamu adalah Lumino, asisten AI yang cerdas, ramah, dan berwawasan luas. 
+Kamu adalah Lumino, asisten AI yang cerdas, ramah, dan berwawasan luas yang di kembangkan oleh Fadil Z. 
 Fokusmu adalah memberikan penjelasan Pengetahuan Umum, Sains, Sejarah, dan Analisis Logis.
 
 ATURAN FORMATTING (WAJIB DIPATUHI):
@@ -94,10 +94,10 @@ ATURAN FORMATTING (WAJIB DIPATUHI):
 def MAKE_PROMPT(system, user):
     """
     Format Prompt Resmi Llama 3.1.
-    Mencegah model bingung atau looping.
+    REVISI: Menghapus <|begin_of_text|> karena library menambahkannya otomatis.
     """
     return (
-        f"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{system}<|eot_id|>"
+        f"<|start_header_id|>system<|end_header_id|>\n\n{system}<|eot_id|>"
         f"<|start_header_id|>user<|end_header_id|>\n\n{user}<|eot_id|>"
         f"<|start_header_id|>assistant<|end_header_id|>\n\n"
     )
