@@ -4,91 +4,159 @@ from pathlib import Path
 # ==================================================
 # 1. PATH CONFIGURATION
 # ==================================================
-# Dapatkan lokasi folder 'backend'
-BACKEND_DIR = Path(__file__).resolve().parent   
-
-# Naik satu level ke atas untuk dapatkan ROOT folder (AIAgent)
+BACKEND_DIR = Path(__file__).resolve().parent
 ROOT_DIR = BACKEND_DIR.parent
-
-# Arahkan ke folder models dari ROOT
 MODELS_DIR = ROOT_DIR / "models"
-
-# Project Dir set ke ROOT
-PROJECT_DIR = ROOT_DIR 
-
-# --- KONFIGURASI MODEL ---
-MODEL_FILENAME = "qwen2.5-coder-7b-instruct-q5_k_m.gguf"
-MODEL_PATH = str(MODELS_DIR / MODEL_FILENAME)
-
-# Validasi path
-if not os.path.exists(MODEL_PATH):
-    raise FileNotFoundError(f"Model tidak ditemukan di: {MODEL_PATH}")
+PROJECT_DIR = ROOT_DIR
 
 # ==================================================
-# 2. MODEL INIT PARAMS (HARDWARE)
+# 2. DEFAULT PARAMETERS
 # ==================================================
-MODEL_INIT_PARAMS = {
-    "model_path": MODEL_PATH,
-    "n_ctx": 16384,           # Wajib besar untuk konteks file kodingan
-    "n_gpu_layers": 99,       # Offload semua ke GPU jika VRAM cukup
-    "n_threads": 8,           
-    "n_batch": 512,           
-    "verbose": False,         
-    "use_mlock": True,        
-    "use_mmap": True,         
-    "rope_freq_base": 1000000 
+DEFAULT_INIT_PARAMS = {
+    "n_ctx": 8192,
+    "n_gpu_layers": 99,  # Offload all to GPU
+    "n_threads": 8,
+    "n_batch": 512,
+    "verbose": False,
+    "use_mlock": True,
+    "use_mmap": True,
+    "rope_freq_base": 1000000
+}
+
+DEFAULT_GEN_PARAMS = {
+    "max_tokens": 4096,
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "top_k": 40,
+    "repeat_penalty": 1.1,
 }
 
 # ==================================================
-# 3. GENERATION PARAMS (RESPONSE)
+# 3. PROMPT TEMPLATES & SYSTEM PROMPTS
 # ==================================================
-GENERATION_PARAMS = {
-    "max_tokens": 4096,      
-    "temperature": 0.2,       
-    "top_p": 0.9, 
-    "top_k": 40,            
-    "repeat_penalty": 1.05,    
-    "echo": False,            
-    "stop": ["<|im_end|>", "<|endoftext|>", "\n\n\n"]
-}
+SYSTEM_PROMPT_GENERAL = """
+Kamu adalah Lumino, asisten AI yang cerdas, ramah, dan berwawasan luas.
+Fokusmu adalah memberikan penjelasan yang jelas, akurat, dan edukatif.
 
-# ==================================================
-# 4. SYSTEM PROMPT (CORE INTELLIGENCE)
-# ==================================================
-# Update: Menambahkan aturan "CLI Math Formatting"
-
-SYSTEM_PROMPT = """
-Kamu adalah Lumino, Assistant Local Intelligence Unit spesialis coding dan arsitektur software yang di kembangkan oleh Fadil Z.
-
-ATURAN FORMATTING TAMPILAN (PENTING UNTUK CLI):
-1. MATEMATIKA & LOGIKA (WAJIB UNICODE):
-   - Environment ini adalah TERMINAL/CLI, sehingga TIDAK BISA merender LaTeX (seperti $$, \\frac, \\sqrt).
-   - JANGAN gunakan sintaks LaTeX. Ganti dengan Simbol Unicode standar:
-     * Akar Kuadrat : Gunakan '√' (contoh: √25 = 5)
-     * Pangkat      : Gunakan '²' atau '³' atau '^' (contoh: x² + y²)
-     * Pecahan      : Gunakan '/' atau '÷' (contoh: 1/2 atau 10 ÷ 2)
-     * Perkalian    : Gunakan '×' (contoh: 5 × 5)
-     * Pi           : Gunakan 'π' (contoh: 3.14)
-     * Sigma/Sum    : Gunakan '∑'
-     * Integral     : Gunakan '∫'
-     * Logika       : Gunakan '≠', '≈', '≤', '≥'
-   - Untuk rumus yang sangat kompleks, tuliskan dalam format satu baris (linear) dengan tanda kurung yang jelas. 
-     Contoh: x = (-b ± √(b² - 4ac)) / 2a
-
-2. CODING BERKUALITAS:
-   - Tulis kode yang rapi, modular, dan Clean Code.
-   - Berikan komentar pada bagian krusial.
-   - Selalu gunakan blok markdown untuk kode:
-     ```python
-     # Kode disini
-     ```
-
-3. DEBUGGING & ANALISIS:
-   - Jelaskan sumber masalah (Root Cause) secara langsung.
-   - Berikan solusi konkret (Code Fix).
-   - Identifikasi potensi bug atau anti-pattern.
-
-4. GAYA KOMUNIKASI:
-   - Bahasa Indonesia teknis yang padat dan jelas.
-   - To-the-point, hindari basa-basi berlebihan.
+ATURAN FORMATTING (CLI):
+- JANGAN gunakan LaTeX block ($$, \\frac). Gunakan Unicode (√, ², ÷).
+- Gunakan bullet points untuk list.
+- Bahasa Indonesia yang baku dan jelas.
 """
+
+SYSTEM_PROMPT_CODING = """
+Kamu adalah Lumino, Assistant Local Intelligence Unit spesialis coding dan arsitektur software.
+
+ATURAN:
+1. MATEMATIKA: Gunakan Unicode (√, ², ÷). JANGAN LaTeX.
+2. CODING: Gunakan markdown block ```language ... ```.
+3. ANALISIS: To-the-point, jelaskan root cause dan solusi.
+"""
+
+def format_chatml(system, messages):
+    """Format for Qwen/ChatML models"""
+    prompt = f"<|im_start|>system\n{system}<|im_end|>\n"
+    for msg in messages:
+        role = msg.get("role", "user")
+        content = msg.get("content", "")
+        prompt += f"<|im_start|>{role}\n{content}<|im_end|>\n"
+    prompt += "<|im_start|>assistant\n"
+    return prompt
+
+def format_llama3(system, messages):
+    """Format for Llama 3 models"""
+    prompt = f"<|start_header_id|>system<|end_header_id|>\n\n{system}<|eot_id|>"
+    for msg in messages:
+        role = msg.get("role", "user")
+        content = msg.get("content", "")
+        prompt += f"<|start_header_id|>{role}<|end_header_id|>\n\n{content}<|eot_id|>"
+    prompt += "<|start_header_id|>assistant<|end_header_id|>\n\n"
+    return prompt
+
+# ==================================================
+# 4. MODEL CONFIGURATIONS
+# ==================================================
+class ModelConfig:
+    def __init__(self, filename):
+        self.filename = filename
+        self.path = str(MODELS_DIR / filename)
+        
+        # Default values
+        self.description = "General Purpose AI"
+        self.icon = "🧠"
+        self.name = filename.replace(".gguf", "").replace("-", " ").title()
+        
+        # Detect type based on filename
+        lower_name = filename.lower()
+        
+        if "coder" in lower_name:
+            self.type = "qwen_coder"
+            self.name = "Qwen 2.5 Coder"
+            self.description = "Spesialis Coding & Arsitektur"
+            self.icon = "💻"
+            self.system_prompt = SYSTEM_PROMPT_CODING
+            self.stop_tokens = ["<|im_end|>", "<|endoftext|>"]
+            self.format_func = format_chatml
+            self.init_params = DEFAULT_INIT_PARAMS.copy()
+            self.init_params["n_ctx"] = 16384 
+            self.gen_params = DEFAULT_GEN_PARAMS.copy()
+            self.gen_params["temperature"] = 0.1 # Precise for coding
+            self.gen_params["stop"] = self.stop_tokens
+            
+        elif "qwen" in lower_name and "instruct" in lower_name:
+            self.type = "qwen_instruct"
+            self.name = "Qwen 2.5 Instruct"
+            self.description = "Asisten Serbaguna & Cepat"
+            self.icon = "🚀"
+            self.system_prompt = SYSTEM_PROMPT_GENERAL
+            self.stop_tokens = ["<|im_end|>", "<|endoftext|>"]
+            self.format_func = format_chatml
+            self.init_params = DEFAULT_INIT_PARAMS.copy()
+            self.init_params["n_ctx"] = 8192
+            self.gen_params = DEFAULT_GEN_PARAMS.copy()
+            self.gen_params["temperature"] = 0.7
+            self.gen_params["stop"] = self.stop_tokens
+
+        elif "llama-3" in lower_name:
+            self.type = "llama3"
+            self.name = "Llama 3.1 Instruct" 
+            self.description = "Pengetahuan Umum & Logika"
+            self.icon = "📚"
+            self.system_prompt = SYSTEM_PROMPT_GENERAL
+            self.stop_tokens = ["<|eot_id|>", "<|end_of_text|>", "assistant\n\n"]
+            self.format_func = format_llama3
+            self.init_params = DEFAULT_INIT_PARAMS.copy()
+            self.init_params["rope_freq_base"] = 500000 
+            self.gen_params = DEFAULT_GEN_PARAMS.copy()
+            self.gen_params["stop"] = self.stop_tokens
+            
+        else:
+            # Fallback / Generic
+            self.type = "generic"
+            self.description = "Model Generik"
+            self.icon = "🤖"
+            self.system_prompt = SYSTEM_PROMPT_GENERAL
+            self.stop_tokens = ["User:", "Assistant:"]
+            self.format_func = None 
+            self.init_params = DEFAULT_INIT_PARAMS.copy()
+            self.gen_params = DEFAULT_GEN_PARAMS.copy()
+
+        # CRITICAL FIX: Add model_path to init_params
+        self.init_params["model_path"] = self.path
+
+    def make_prompt(self, messages):
+        if self.format_func:
+            return self.format_func(self.system_prompt, messages)
+        else:
+            # Fallback simple format
+            prompt = f"System: {self.system_prompt}\n\n"
+            for msg in messages:
+                prompt += f"{msg['role'].capitalize()}: {msg['content']}\n"
+            prompt += "Assistant: "
+            return prompt
+
+def get_available_models():
+    """Scan models directory for .gguf files"""
+    if not MODELS_DIR.exists():
+        return []
+    return [f.name for f in MODELS_DIR.glob("*.gguf")]

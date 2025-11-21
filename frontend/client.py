@@ -2,6 +2,7 @@ import requests
 import sys
 import time
 import os
+import json
 from rich.console import Console
 from rich.prompt import Prompt
 from rich.panel import Panel
@@ -9,6 +10,8 @@ from rich.text import Text
 from rich.align import Align
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
 from rich.rule import Rule
+from rich.live import Live
+from rich.markdown import Markdown
 from rich import box
 
 # --- 1. SETUP INPUT (SILENT FALLBACK) ---
@@ -44,7 +47,6 @@ try:
     from formatter import create_styled_panel
 except ImportError:
     def create_styled_panel(text, title):
-        from rich.markdown import Markdown
         return Panel(Markdown(text), title=title)
 
 # --- KONFIGURASI ---
@@ -84,7 +86,7 @@ def show_intro():
         console.print(Align.center(Text(line, style=f"bold {gradient_color}")))
     
     console.print(Align.center(Text("AI INTELLIGENCE CORE", style=f"bold {C_DIM} tracking=1")))
-    console.print(Align.center(Text("v3.8-stable", style=f"{C_DIM}")))
+    console.print(Align.center(Text("v4.0-stream", style=f"{C_DIM}")))
     console.print("\n")
 
     if not USE_PROMPT_TOOLKIT:
@@ -156,7 +158,6 @@ def get_user_input():
         return Prompt.ask(f"[bold {C_PRIMARY}]❯[/]")
 
 def run():
-    # --- PERBAIKAN DI SINI: GLOBAL DECLARED DI AWAL FUNGSI ---
     global USE_PROMPT_TOOLKIT, session 
     
     show_intro()
@@ -184,40 +185,83 @@ def run():
                 console.print(f"\n[bold {C_DIM}]Closing connection...[/]")
                 break
 
-            # Kirim ke Server
-            with console.status(f"[bold {C_DIM}]Thinking...[/]", spinner="dots", spinner_style=C_PRIMARY):
-                try:
-                    start_time = time.time()
-                    payload = {"message": user_input}
-                    response = requests.post(API_URL, json=payload)
+            # Kirim ke Server dengan STREAMING
+            try:
+                start_time = time.time()
+                
+                payload = {"message": user_input, "stream": True}
+                
+                full_response = ""
+                files_read = []
+                
+                with requests.post(API_URL, json=payload, stream=True) as response:
                     response.raise_for_status()
+                    
+                    # Siapkan Panel Live
+                    live_panel = Panel(
+                        "", 
+                        title="Lumino [dim](Thinking...)[/]", 
+                        border_style=C_ACCENT,
+                        box=box.ROUNDED,
+                        padding=(1, 2)
+                    )
+                    
+                    with Live(live_panel, console=console, refresh_per_second=10, transient=True) as live:
+                        try:
+                            for line in response.iter_lines():
+                                if line:
+                                    try:
+                                        chunk = json.loads(line.decode('utf-8'))
+                                        
+                                        if chunk['type'] == 'token':
+                                            token = chunk['content']
+                                            full_response += token
+                                            
+                                            live.update(Panel(
+                                                Markdown(full_response),
+                                                title="Lumino [dim](Streaming...)[/]",
+                                                border_style=C_ACCENT,
+                                                box=box.ROUNDED,
+                                                padding=(1, 2)
+                                            ))
+                                            
+                                        elif chunk['type'] == 'info':
+                                            files_read = chunk.get('files', [])
+                                            
+                                    except json.JSONDecodeError:
+                                        pass
+                        except KeyboardInterrupt:
+                            full_response += "\n\n[bold red]⛔ Interrupted by User[/]"
+                            live.update(Panel(
+                                Markdown(full_response),
+                                title="Lumino [dim](Stopped)[/]",
+                                border_style="red",
+                                box=box.ROUNDED,
+                                padding=(1, 2)
+                            ))
+                            pass
+
+                    # Final Render
                     end_time = time.time()
-                    
-                    data = response.json()
-                    bot_reply = data.get("response", "")
-                    files_read = data.get("files_read", [])
-                    
                     latency = (end_time - start_time) * 1000
                     
-                    panel_title = f"Lumino [dim]({latency:.0f}ms)[/]"
-                    final_panel = create_styled_panel(bot_reply, title=panel_title)
+                    final_panel = create_styled_panel(full_response, title=f"Lumino [dim]({latency:.0f}ms)[/]")
                     console.print(final_panel)
 
                     if files_read:
                         file_list = ", ".join([f"'{f}'" for f in files_read])
                         console.print(f"   [{C_ACCENT}]└─ 📎 References:[/][dim] {file_list}[/]")
 
-                except requests.exceptions.ConnectionError:
-                    console.print(Panel(f"[bold red]Connection Lost[/]\nServer unreachable.", style="red"))
-                except Exception as e:
-                    console.print(Panel(f"[bold red]Error[/]\n{str(e)}", style="red"))
+            except requests.exceptions.ConnectionError:
+                console.print(Panel(f"[bold red]Connection Lost[/]\nServer unreachable.", style="red"))
+            except Exception as e:
+                console.print(Panel(f"[bold red]Error[/]\n{str(e)}", style="red"))
 
         except KeyboardInterrupt:
             continue
         except EOFError:
             break
         except Exception as e:
-            # Fallback Logic jika input canggih crash
             if USE_PROMPT_TOOLKIT:
                 console.print(f"\n[dim yellow]⚠ Input Error ({e}). Switching to Basic Mode...[/]")
                 USE_PROMPT_TOOLKIT = False

@@ -1,0 +1,2 @@
+[DEBUG] Generating with image_data present: False
+[ERROR] Llama.create_chat_completion() got an unexpected keyword argument 'echo'
