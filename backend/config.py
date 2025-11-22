@@ -35,7 +35,7 @@ DEFAULT_GEN_PARAMS = {
 # 3. PROMPT TEMPLATES & SYSTEM PROMPTS
 # ==================================================
 SYSTEM_PROMPT_GENERAL = """
-Kamu adalah Lumino, asisten AI yang cerdas, ramah, dan berwawasan luas.
+Kamu adalah Lumino, asisten AI yang cerdas, ramah, dan berwawasan luas yang di kembangkan oleh Fadil Z.
 Fokusmu adalah memberikan penjelasan yang jelas, akurat, dan edukatif.
 
 ATURAN FORMATTING (CLI):
@@ -92,7 +92,7 @@ class ModelConfig:
         if "coder" in lower_name:
             self.type = "qwen_coder"
             self.name = "Qwen 2.5 Coder"
-            self.description = "Spesialis Coding & Arsitektur"
+            self.description = "Coding & Arsitektur"
             self.icon = "💻"
             self.system_prompt = SYSTEM_PROMPT_CODING
             self.stop_tokens = ["<|im_end|>", "<|endoftext|>"]

@@ -4,6 +4,12 @@ import sys
 import logging
 import os
 import json
+import io
+
+# FORCE UTF-8 ENCODING (Fix for Windows 'charmap' error)
+if sys.platform == 'win32':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 # --- 1. SILENCE FLASK & WERKZEUG (KODE INI WAJIB PALING ATAS) ---
 # Matikan log startup Flask CLI (* Serving Flask app...)
@@ -22,7 +28,6 @@ log.disabled = True
 # ----------------------------------------------------------------
 
 # --- IMPORT LAINNYA ---
-from frontend import intro
 from frontend import client 
 from backend.core import engine
 from backend.utils import process_input_commands
@@ -48,33 +53,52 @@ def chat():
     
     if stream_mode:
         def generate():
-            # Yield file info first as a special event/chunk if needed
-            # But for simplicity, we just stream the text. 
-            # Client might need to know about files_read separately or we prepend it.
-            # if files_read:
-            #    yield json.dumps({"type": "info", "files": files_read}) + "\n"
-            
             # Stream the response
-            for token in engine.generate_response(processed_msg, stream=True):
-                yield json.dumps({"type": "token", "content": token}) + "\n"
+            for event in engine.generate_response(processed_msg, stream=True):
+                if isinstance(event, dict):
+                    if event["type"] == "content":
+                        yield json.dumps({"type": "token", "content": event["data"]}) + "\n"
+                    elif event["type"] == "usage":
+                        yield json.dumps({"type": "usage", "stats": event["data"]}) + "\n"
+                else:
+                    # Fallback for legacy string yields (safety)
+                    yield json.dumps({"type": "token", "content": event}) + "\n"
         
         return Response(stream_with_context(generate()), mimetype='application/json')
     else:
-        ai_response = engine.generate_response(processed_msg, stream=False)
+        result = engine.generate_response(processed_msg, stream=False)
+        
+        # Handle legacy string response
+        if isinstance(result, str):
+             return jsonify({"response": result, "files_read": []})
+             
+        # Handle new dict response
         return jsonify({
-            "response": ai_response,
+            "response": result["content"],
+            "usage": result.get("usage"),
             "files_read": []
         })
 
-@app.route('/reset', methods=['POST'])
-def reset_model():
-    """Memicu menu pemilihan model di sisi server"""
+@app.route('/model/set', methods=['POST'])
+def set_model():
+    data = request.json
+    model_name = data.get('model')
+    if not model_name:
+        return jsonify({"error": "Model name required"}), 400
+        
     try:
-        # Panggil fungsi switch di engine
-        engine.switch_model() 
-        return jsonify({"status": "success", "message": "Neural Module Switched"})
+        success = engine.switch_model(model_name)
+        if success:
+            return jsonify({"status": "success", "message": f"Switched to {model_name}"})
+        else:
+            return jsonify({"error": "Failed to load model"}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/reset', methods=['POST'])
+def reset_model():
+    """Legacy endpoint - redirects to default behavior or error"""
+    return jsonify({"error": "Use /model/set to switch models"}), 400
 
 @app.route('/models', methods=['GET'])
 def list_models():
@@ -85,12 +109,8 @@ def run_server():
     app.run(host='127.0.0.1', port=5000, debug=False, use_reloader=False)
 
 if __name__ == '__main__':
-    # 1. Intro Visual
-    try:
-        intro() 
-    except:
-        pass
-
+    # 1. Intro Visual (Removed legacy intro import)
+    
     # 2. Jalankan Server (Sekarang benar-benar hening)
     server_thread = threading.Thread(target=run_server, daemon=True)
     server_thread.start()

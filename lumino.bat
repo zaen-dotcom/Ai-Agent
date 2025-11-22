@@ -1,17 +1,18 @@
 @echo off
-title LUMINO SYSTEM
+title LUMINO INTELLIGENCE
 color 0B
 cls
 
 echo.
-echo  LUMINO INTELLIGENCE SYSTEM
-echo  Initializing...
-echo.
+echo  [+] Initializing Environment...
 
 :: Pindah ke folder script
 cd /d "%~dp0"
 
-:: Jalankan main.py langsung
+:: Set Encoding agar support emoji/unicode
+set PYTHONIOENCODING=utf-8
+
+:: Jalankan main.py
 python main.py
 
 :: Jika error, jangan langsung tutup layar
